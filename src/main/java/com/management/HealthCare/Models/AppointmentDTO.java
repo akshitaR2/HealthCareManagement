@@ -16,7 +16,7 @@ public class AppointmentDTO {
 	private LocalDateTime startdate;
 	private String status;
 	private String reason;
-	
+	private int appointmentId;
 	private String patients_name;
 	private String patients_contact_info;
 	
@@ -133,6 +133,16 @@ public class AppointmentDTO {
 
 	public void setPatients_contact_info(String patients_contact_info) {
 		this.patients_contact_info = patients_contact_info;
+	}
+
+
+	public int getAppointmentId() {
+		return appointmentId;
+	}
+
+
+	public void setAppointmentId(int appointmentId) {
+		this.appointmentId = appointmentId;
 	}
 
 

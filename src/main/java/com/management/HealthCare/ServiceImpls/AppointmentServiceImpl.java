@@ -1,8 +1,7 @@
 package com.management.HealthCare.ServiceImpls;
 
-import java.lang.StackWalker.Option;
 import java.time.DayOfWeek;
-import java.time.Duration;
+//import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -15,22 +14,25 @@ import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.apache.catalina.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.management.HealthCare.Entities.Appointements;
 import com.management.HealthCare.Entities.Doctors;
+import com.management.HealthCare.Entities.MedicalRecords;
 import com.management.HealthCare.Entities.Patients;
 import com.management.HealthCare.Mappers.MapperConfig;
 import com.management.HealthCare.Models.AppointmentDTO;
+import com.management.HealthCare.Models.MedicalRecordsDTO;
 import com.management.HealthCare.Repositories.AppointementRepo;
 import com.management.HealthCare.Repositories.DoctorsRepo;
+import com.management.HealthCare.Repositories.MedicalRecordsRepo;
 import com.management.HealthCare.Repositories.PatientsRepo;
 import com.management.HealthCare.Repositories.UserRepo;
+//import com.management.HealthCare.SecuredLogin.Repository.UserRepo;
 import com.management.HealthCare.Service.AppointmentService;
 
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AppointmentServiceImpl implements AppointmentService{
@@ -50,9 +52,12 @@ public class AppointmentServiceImpl implements AppointmentService{
 	@Autowired
 	MapperConfig mapper;
 	
-//	private final MappeConfig mapper =new MapperConfig();
-	private static final int MAX_TIME_OF_SLOT = 30; 
-	private static final Duration SLOT_DURATION = Duration.ofMinutes(MAX_TIME_OF_SLOT);
+	@Autowired
+	MedicalRecordsRepo medRepo;
+	
+//	 private static final int MAX_TIME_OF_SLOT = 30; // Define slot duration in minutes
+//	 private static final Duration SLOT_DURATION = Duration.ofMinutes(MAX_TIME_OF_SLOT);
+	private static final int SLOT_DURATION_IN_MINUTES =30;
 	private static final int MAX_DAYS_TO_CHECK = 30;
 
 	
@@ -70,7 +75,7 @@ public class AppointmentServiceImpl implements AppointmentService{
 			createAppointment.setPatient(patEntity);
 			createAppointment.setDoctor(doc);
 			createAppointment.setStartTime(firstEntry.get().getValue());
-			createAppointment.setEndTime(firstEntry.get().getValue().plusMinutes(MAX_TIME_OF_SLOT));
+			createAppointment.setEndTime(firstEntry.get().getValue().plusMinutes(SLOT_DURATION_IN_MINUTES));
 			createAppointment.setReason(dto.getReason());
 			createAppointment.setStatus("open");
 		appRepo.save(createAppointment);
@@ -86,119 +91,151 @@ public class AppointmentServiceImpl implements AppointmentService{
 			throw e;
 		}
 	}
-
-	private Map<Doctors, LocalDateTime> getAvailableSlotsForDoc(List<Doctors> docIds) {
-		 LocalDate today = LocalDate.now();
-		 Map<Doctors,LocalDateTime> availableSlots= new HashMap<Doctors, LocalDateTime>();
-		 for(Doctors doc:docIds) {
-			 boolean foundAvailableSlot=false;
-	         LocalDate dateToCheck = today;
-
-			 List<Appointements> appointments= doc.getAppointements();
-			 if(appointments.isEmpty()) {
-				 availableSlots.put(doc, calculatePotentialSlots(doc.getWorkStartTime(), doc.getWorkEndTime(), today.plusDays(2), SLOT_DURATION).get(0));
-				 break;
-			 }
-	         
-			 while(!foundAvailableSlot && !dateToCheck.isAfter(today.plusDays(MAX_DAYS_TO_CHECK)) ) {
-				 if (dateToCheck.getDayOfWeek() != DayOfWeek.SATURDAY && dateToCheck.getDayOfWeek() != DayOfWeek.SUNDAY) {
-//		            List<Appointements> appointments= appRepo.findByDoctorAndStartTimeBetween(
-//		                    doc,
-//		                    LocalDateTime.of(dateToCheck, LocalTime.MIN),
-//		                    LocalDateTime.of(dateToCheck, LocalTime.MAX)
-//		                );
-				
-		            // Use HashSet to track booked slots for quick lookup
-				 
-		            Set<LocalTime> bookedSlots = appointments.stream().filter(app->app.getStatus().matches("open"))
-		                    .map(appointment -> appointment.getStartTime().toLocalTime())
-		                    .collect(Collectors.toSet());
-				 
-		         // Use a PriorityQueue to store and access potential slots efficiently
-	                PriorityQueue<LocalDateTime> potentialSlots = new PriorityQueue<>(calculatePotentialSlots(
-	                    doc.getWorkStartTime(), doc.getWorkEndTime(),dateToCheck, SLOT_DURATION
-	                ));
-	             // Remove booked slots from the PriorityQueue
-	                potentialSlots.removeAll(bookedSlots);
-	                
-	                // Check for available slot
-	                if (!potentialSlots.isEmpty()) {
-	                	availableSlots.put(doc, potentialSlots.peek()); // Get the earliest available slot
-	                    foundAvailableSlot = true;
-	                } else {
-	                    // Move to the next day
-	                    dateToCheck = dateToCheck.plusDays(1);
-	                }
-			 
-			 }
-		 }
-		 }
-		
-		return availableSlots;
-	}
-
 	
-	 private List<LocalDateTime> calculatePotentialSlots(LocalTime workStartTime, LocalTime workEndTime, LocalDate date, Duration slotDuration) {
-	        List<LocalDateTime> slots = new ArrayList<>();
-	        LocalDateTime currentSlotStart = LocalDateTime.of(date, workStartTime);
+	
+	private Map<Doctors, LocalDateTime> getAvailableSlotsForDoc(List<Doctors> docIds) {
+	 LocalDate today = LocalDate.now();
+	 Map<Doctors,LocalDateTime> availableSlots= new HashMap<Doctors, LocalDateTime>();
+	 for(Doctors doc:docIds) {
+		 boolean foundAvailableSlot=false;
+        LocalDate dateToCheck = today;
 
-	        while (currentSlotStart.toLocalTime().isBefore(workEndTime)) {
-	            slots.add(currentSlotStart);
-	            currentSlotStart = currentSlotStart.plus(slotDuration);
-	        }
+		 List<Appointements> appointments= doc.getAppointements();
+		 if(appointments.isEmpty()) {
+			 availableSlots.put(doc, calculatePotentialSlots(doc.getWorkStartTime(), doc.getWorkEndTime(), today.plusDays(2), SLOT_DURATION_IN_MINUTES).get(0));
+			 break;
+		 }
+        
+		 while(!foundAvailableSlot && !dateToCheck.isAfter(today.plusDays(MAX_DAYS_TO_CHECK)) ) {
+			 if (dateToCheck.getDayOfWeek() != DayOfWeek.SATURDAY && dateToCheck.getDayOfWeek() != DayOfWeek.SUNDAY) {
+			 
+	            Set<LocalTime> bookedSlots = appointments.stream().filter(app->app.getStatus().matches("open"))
+	                    .map(appointment -> appointment.getStartTime().toLocalTime())
+	                    .collect(Collectors.toSet());
+			 
+	         // Use a PriorityQueue to store and access potential slots efficiently
+               PriorityQueue<LocalDateTime> potentialSlots = new PriorityQueue<>(calculatePotentialSlots(
+                   doc.getWorkStartTime(), doc.getWorkEndTime(),dateToCheck, SLOT_DURATION_IN_MINUTES
+               ));
+            // Remove booked slots from the PriorityQueue
+               potentialSlots.removeAll(bookedSlots);
+               
+               // Check for available slot
+               if (!potentialSlots.isEmpty()) {
+               	availableSlots.put(doc, potentialSlots.peek()); // Get the earliest available slot
+                   foundAvailableSlot = true;
+               } else {
+                   // Move to the next day
+                   dateToCheck = dateToCheck.plusDays(1);
+               }
+		 
+		 }
+	 }
+	 }
+	
+	return availableSlots;
+}
 
-	        return slots;
-	    } 
-//	------------------ ACTUAL CODE ---------------------DO NOT REMOVE--------------------------- 	    
+
+private List<LocalDateTime> calculatePotentialSlots(LocalTime workStartTime, LocalTime workEndTime, LocalDate date, int slotDuration) {
+       List<LocalDateTime> slots = new ArrayList<>();
+       LocalDateTime currentSlotStart = LocalDateTime.of(date, workStartTime);
+
+       while (currentSlotStart.toLocalTime().isBefore(workEndTime)) {
+           slots.add(currentSlotStart);
+           currentSlotStart = currentSlotStart.plusMinutes(slotDuration);
+       }
+
+       return slots;
+   } 
+	
+
+//--------------------------------- actual code since duration was throwing error above is modified -------------
+//	private Map<Doctors, LocalDateTime> getAvailableSlotsForDoc(List<Doctors> docIds) {
+//		 LocalDate today = LocalDate.now();
+//		 Map<Doctors,LocalDateTime> availableSlots= new HashMap<Doctors, LocalDateTime>();
+//		 for(Doctors doc:docIds) {
+//			 boolean foundAvailableSlot=false;
+//	         LocalDate dateToCheck = today;
 //
-//	@Override
-//	public List<AppointmentDTO> getPatientAppointments(String patient_id) {
-//		Optional<Patients> patient=  Optional.ofNullable( patRepo.findByPatientId(patient_id));
-//		List<AppointmentDTO> appoitmentsLists=new ArrayList<AppointmentDTO>(); 
-//		patient.ifPresent(p->
-//		Optional.ofNullable(p.getAppointements()).ifPresent(appointment->{
-//		Optional.ofNullable(appointment.stream().filter(app->app.getStatus().equals("open"))).ifPresent(a->{
-//			a.forEach(appoint->appoitmentsLists.add(mapper.AppointementEntitytoDTO(appoint)));
-//		});	
-//		}));
-//		return appoitmentsLists;
-//	}
-//	
-//
-//	@Override
-//	public List<AppointmentDTO> getDoctorsAppointments(String doctors_id) {
-//		 Doctors doc=docRepo.findByDoctorsId(doctors_id);
-//		  List<AppointmentDTO> appoitmentsLists=new ArrayList<AppointmentDTO>(); 
-//		    Optional.ofNullable(doc.getAppointements())
-//		        .ifPresent(appointments -> {
-//		            appointments.forEach(app -> 
-//		                appoitmentsLists.add(mapper.AppointementEntitytoDocAppDto(app))
-//		            );
-//		        });
+//			 List<Appointements> appointments= doc.getAppointements();
+//			 if(appointments.isEmpty()) {
+//				 availableSlots.put(doc, calculatePotentialSlots(doc.getWorkStartTime(), doc.getWorkEndTime(), today.plusDays(2), SLOT_DURATION).get(0));
+//				 break;
+//			 }
+//	         
+//			 while(!foundAvailableSlot && !dateToCheck.isAfter(today.plusDays(MAX_DAYS_TO_CHECK)) ) {
+//				 if (dateToCheck.getDayOfWeek() != DayOfWeek.SATURDAY && dateToCheck.getDayOfWeek() != DayOfWeek.SUNDAY) {
+//				 
+//		            Set<LocalTime> bookedSlots = appointments.stream().filter(app->app.getStatus().matches("open"))
+//		                    .map(appointment -> appointment.getStartTime().toLocalTime())
+//		                    .collect(Collectors.toSet());
+//				 
+//		         // Use a PriorityQueue to store and access potential slots efficiently
+//	                PriorityQueue<LocalDateTime> potentialSlots = new PriorityQueue<>(calculatePotentialSlots(
+//	                    doc.getWorkStartTime(), doc.getWorkEndTime(),dateToCheck, SLOT_DURATION
+//	                ));
+//	             // Remove booked slots from the PriorityQueue
+//	                potentialSlots.removeAll(bookedSlots);
+//	                
+//	                // Check for available slot
+//	                if (!potentialSlots.isEmpty()) {
+//	                	availableSlots.put(doc, potentialSlots.peek()); // Get the earliest available slot
+//	                    foundAvailableSlot = true;
+//	                } else {
+//	                    // Move to the next day
+//	                    dateToCheck = dateToCheck.plusDays(1);
+//	                }
+//			 
+//			 }
+//		 }
+//		 }
 //		
-//		return appoitmentsLists;
+//		return availableSlots;
 //	}
 //
-//	@Override
-//	public List<AppointmentDTO> getPatientPastRecords(String patient_id, String status) {
-//		Optional<Patients> patient=  Optional.ofNullable( patRepo.findByPatientIdAndStatus(patient_id,status));
-//		List<AppointmentDTO> appoitmentsLists=new ArrayList<AppointmentDTO>(); 
-//		patient.ifPresent(p->
-//		Optional.ofNullable(p.getAppointements()).ifPresent(appointment->{
-//		Optional.ofNullable(appointment.stream().filter(app->app.getStatus().equals("closed"))).ifPresent(a->{
-//			a.forEach(appoint->appoitmentsLists.add(mapper.AppointementEntitytoDTO(appoint)));
-//		});	
-//		}));
+//	
+//	 private List<LocalDateTime> calculatePotentialSlots(LocalTime workStartTime, LocalTime workEndTime, LocalDate date, Duration slotDuration) {
+//	        List<LocalDateTime> slots = new ArrayList<>();
+//	        LocalDateTime currentSlotStart = LocalDateTime.of(date, workStartTime);
 //
-//		return appoitmentsLists;
-//	}
-	 
-// ------------------------ DO NOT REMOVE THE ABOVE COMMENTED SESSION------------------------------------------
+//	        while (currentSlotStart.toLocalTime().isBefore(workEndTime)) {
+//	            slots.add(currentSlotStart);
+//	            currentSlotStart = currentSlotStart.plus(slotDuration);
+//	        }
+//
+//	        return slots;
+//	    } 
 
 	@Override
-	public String updateAppointment(String id, String status) {
+	public String cancelAppointment(int id) {
 		
-		return null;
+		Appointements app=appRepo.findById(id).get();
+		app.setStatus("cancel");
+		appRepo.save(app);
+			return "Appointment is cancelled ";
+		
+	}
+	
+	@Override
+	@Transactional
+	public String  updateStatus(MedicalRecordsDTO dto) {
+		Appointements app=appRepo.findById(dto.getAppointementId()).get();
+		app.setStatus(dto.getStatus());
+		MedicalRecords medRecords= new MedicalRecords();
+		medRecords.setDiagnosis(dto.getDiagnosis());
+		medRecords.setDoctor(app.getDoctor());
+		medRecords.setNotes(dto.getNotes());
+		medRecords.setPatient(app.getPatient());
+		medRecords.setPrescriptions(dto.getPrescriptions());
+		medRecords.setTreatment(dto.getTreatment());
+		medRecords.setStatus(dto.getStatus());
+		medRecords.setVisit_date(app.getStartTime());
+		medRepo.save(medRecords);
+		appRepo.save(app);
+		
+		return "medical records updated and appointment closed";
+		
 	}
    
 //-------------------------------- NEW TRY USING APPOINT ENTITY--------------------------------------
@@ -225,7 +262,7 @@ public class AppointmentServiceImpl implements AppointmentService{
 	}
 
 	@Override
-	public List<AppointmentDTO> getPatientPastRecords(String patient_id, String status) {
+	public List<AppointmentDTO> getPatientPastAppointments(String patient_id, String status) {
 		List<AppointmentDTO> appoitmentsLists=new ArrayList<AppointmentDTO>(); 
 		Optional<List<Appointements>> appointments=Optional.ofNullable(appRepo.findAllByPatientIdAndStatus(patient_id,status));
 		appointments.ifPresent(appointment->{

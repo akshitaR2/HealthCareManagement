@@ -10,18 +10,18 @@ public class UserDto {
 
 	private String username;
 	private String password;
-	private String uniqueId;
-	private String emailId;
+//	private String uniqueId;
+//	private String emailId;
 	private String role;
 	
 	
 	
-	public UserDto(String username, String password, String uniqueId, String emailId, String role) {
+	public UserDto(String username, String password, String role) {
 		super();
 		this.username = username;
 		this.password = password;
-		this.uniqueId = uniqueId;
-		this.emailId = emailId;
+//		this.uniqueId = uniqueId;
+//		this.emailId = emailId;
 		this.role = role;
 	}
 
@@ -42,18 +42,18 @@ public class UserDto {
 		this.password = password;
 	}
 	
-	public String getUniqueId() {
-		return uniqueId;
-	}
-	public void setUniqueId(String uniqueId) {
-		this.uniqueId = uniqueId;
-	}
-	public String getEmailId() {
-		return emailId;
-	}
-	public void setEmailId(String emailId) {
-		this.emailId = emailId;
-	}
+//	public String getUniqueId() {
+//		return uniqueId;
+//	}
+//	public void setUniqueId(String uniqueId) {
+//		this.uniqueId = uniqueId;
+//	}
+//	public String getEmailId() {
+//		return emailId;
+//	}
+//	public void setEmailId(String emailId) {
+//		this.emailId = emailId;
+//	}
 
 
 	public String getRole() {

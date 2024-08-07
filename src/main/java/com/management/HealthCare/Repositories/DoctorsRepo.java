@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.management.HealthCare.Entities.Doctors;
+import com.management.HealthCare.Entities.MedicalRecords;
 
 @Repository
 public interface DoctorsRepo extends JpaRepository<Doctors,String> {
@@ -20,6 +21,8 @@ public interface DoctorsRepo extends JpaRepository<Doctors,String> {
 
 	List<Doctors> findAllByDepartmentAndLocation(String department,String location);
 	Doctors  findByDoctorId(String doctors_id);
+
+	List<MedicalRecords> findMedicalRecordsByDoctorId(String id);
 
 
 //	@Query(value = "SELECT d.* FROM doctors d LEFT JOIN appointments a ON d.doctorId = a.doctorId AND a.appointment_date = :appointment_date WHERE a.id IS NULL AND d.department = :department AND d.city = :city", nativeQuery = true)

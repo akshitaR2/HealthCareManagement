@@ -40,7 +40,25 @@ public class DoctorsDTO {
 		this.address = address;
 		this.department = department;
 	}
+	
+	
 
+
+
+	public DoctorsDTO(String emailId, String docName, String specialty, int contact_info, String location,
+			String address, String department, int office_hours, LocalTime workStartTime, LocalTime workEndTime) {
+		super();
+		this.emailId = emailId;
+		this.docName = docName;
+		this.specialty = specialty;
+		this.contact_info = contact_info;
+		this.location = location;
+		this.address = address;
+		this.department = department;
+		this.office_hours = office_hours;
+		this.workStartTime = workStartTime;
+		this.workEndTime = workEndTime;
+	}
 
 
 	public String getUsername() {

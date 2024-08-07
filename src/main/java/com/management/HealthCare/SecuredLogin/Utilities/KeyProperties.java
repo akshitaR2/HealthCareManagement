@@ -1,43 +1,39 @@
-package com.management.HealthCare.AuthenticationConfig.Utilities;
+package com.management.HealthCare.SecuredLogin.Utilities;
 
 import java.security.KeyPair;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
-
 import org.springframework.stereotype.Component;
 
 @Component
 public class KeyProperties {
 
 	private RSAPrivateKey privateKey;
-	private RSAPublicKey publickey;
+	private RSAPublicKey publicKey;
 	
 	
 	public KeyProperties() {
-		KeyPair pair = KeyGenarator.generateKeypair(); 
-		this.privateKey = (RSAPrivateKey) pair.getPrivate();
-		this.publickey = (RSAPublicKey) pair.getPublic();
+		KeyPair keypair= KeyGenerator.generateKey();
+		this.privateKey =   (RSAPrivateKey) keypair.getPrivate();
+		this.publicKey =    (RSAPublicKey) keypair.getPublic();
 	}
-
-
+	
 	public RSAPrivateKey getPrivateKey() {
 		return privateKey;
 	}
-
-
+	
 	public void setPrivateKey(RSAPrivateKey privateKey) {
 		this.privateKey = privateKey;
 	}
-
-
-	public RSAPublicKey getPublickey() {
-		return publickey;
+	
+	public RSAPublicKey getPublicKey() {
+		return publicKey;
 	}
-
-
-	public void setPublickey(RSAPublicKey publickey) {
-		this.publickey = publickey;
+	
+	public void setPublicKey(RSAPublicKey publicKey) {
+		this.publicKey = publicKey;
 	}
+	
 	
 	
 	

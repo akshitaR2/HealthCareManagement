@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.management.HealthCare.Entities.Appointements;
+import com.management.HealthCare.Entities.BillRecords;
 import com.management.HealthCare.Entities.Doctors;
 import com.management.HealthCare.Entities.Patients;
 import com.management.HealthCare.Entities.User;
@@ -13,15 +15,18 @@ import com.management.HealthCare.Mappers.MapperConfig;
 import com.management.HealthCare.Models.DoctorsDTO;
 import com.management.HealthCare.Models.PatientsDTO;
 import com.management.HealthCare.Models.RegisterDTO;
-import com.management.HealthCare.Models.UserDto;
+import com.management.HealthCare.Repositories.AppointementRepo;
+import com.management.HealthCare.Repositories.BillRecordsRepo;
 import com.management.HealthCare.Repositories.DoctorsRepo;
 import com.management.HealthCare.Repositories.PatientsRepo;
 import com.management.HealthCare.Repositories.UserRepo;
+//import com.management.HealthCare.SecuredLogin.Models.User;
+//import com.management.HealthCare.SecuredLogin.Repository.UserRepo;
 import com.management.HealthCare.Service.AuditLogService;
-import com.management.HealthCare.Service.StaffRegisterService;
+import com.management.HealthCare.Service.StaffService;
 
 @Service
-public class StaffRegisterServiceImpl implements StaffRegisterService {
+public class StaffServiceImpl implements StaffService {
 
 	@Autowired
 	UserRepo userRepo;
@@ -38,8 +43,13 @@ public class StaffRegisterServiceImpl implements StaffRegisterService {
 	@Autowired
 	DoctorsRepo doctorsRepo;
 
+	@Autowired
+	AppointementRepo appRepo;
+	
+	@Autowired
+	BillRecordsRepo billRepo;
 
-	private static final Logger logger = LoggerFactory.getLogger(StaffRegisterServiceImpl.class);
+	private static final Logger logger = LoggerFactory.getLogger(StaffServiceImpl.class);
 	
 	
 	@Override
@@ -47,7 +57,8 @@ public class StaffRegisterServiceImpl implements StaffRegisterService {
 	public String addDoctor(DoctorsDTO dto) {
 		if (userRepo.existsByUniqueId(dto.getDoctorId()))
 			return "already exists";
-				userRepo.save(mapper.getUserFromDoctorDto(dto));
+				User user=mapper.getUserFromDoctorDto(dto);
+				userRepo.save(user);
 				Doctors doc=mapper.doctorsDTOtoEntity(dto);
 				doctorsRepo.save(doc);
 				auditService.logAction("user,doctor", "entity", "add",null,"userid");
@@ -75,7 +86,7 @@ public class StaffRegisterServiceImpl implements StaffRegisterService {
 
 	@Override
 	public Boolean addUser(RegisterDTO dto) {
-			if (userRepo.existsByUniqueId(dto.getUniqueId())) {
+			if (userRepo.existsByUsername(dto.getUsername())) {
 				logger.info("register user declines since user already exist");
 				return false;
 			}
@@ -85,6 +96,16 @@ public class StaffRegisterServiceImpl implements StaffRegisterService {
 				logger.info("new user added ");
 				return true;
 		
+	}
+
+	@Override
+	public void startBilling(int id) {
+		BillRecords bill=new BillRecords();
+		Appointements app =appRepo.findById(id).get();
+		bill.setPatient(app.getPatient());
+		bill.setStatus("open");
+		bill.setAmount_due(app.getDoctor().getDoctorFee());
+		billRepo.save(bill);
 	}
 	
 	

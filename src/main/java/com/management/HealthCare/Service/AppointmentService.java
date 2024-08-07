@@ -3,6 +3,7 @@ package com.management.HealthCare.Service;
 import java.util.List;
 
 import com.management.HealthCare.Models.AppointmentDTO;
+import com.management.HealthCare.Models.MedicalRecordsDTO;
 
 public interface AppointmentService {
 
@@ -15,9 +16,11 @@ public interface AppointmentService {
 
 	List<AppointmentDTO> getDoctorsAppointments(String doctors_id);
 
-	List<AppointmentDTO> getPatientPastRecords(String patient_id, String status);
+	List<AppointmentDTO> getPatientPastAppointments(String patient_id, String status);
 
-	String updateAppointment(String id, String status);
+	String cancelAppointment(int id);
+
+	String updateStatus(MedicalRecordsDTO dto);
 
 
 }

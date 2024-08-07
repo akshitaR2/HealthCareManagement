@@ -1,4 +1,4 @@
-package com.management.HealthCare.AuthenticationConfig;
+package com.management.HealthCare.SecuredLogin.UserAuthentication;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -7,7 +7,9 @@ import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.oauth2.server.resource.OAuth2ResourceServerConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -19,23 +21,25 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
 
-import com.management.HealthCare.AuthenticationConfig.Utilities.KeyProperties;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
+import com.management.HealthCare.SecuredLogin.Utilities.KeyProperties;
+
+// configuration class - look into for bean to setup for us 
 
 @Configuration
-public class SecurityConfiguration {
 
-	private final KeyProperties rsaKeyProperty;
+public class SecurityConfiguration {
 	
+	private final KeyProperties key;
 	
-	public SecurityConfiguration(KeyProperties rsaKeyProperty) {
+	public SecurityConfiguration(KeyProperties keyProperties) {
 		super();
-		this.rsaKeyProperty = rsaKeyProperty;
+		this.key = keyProperties;
 	}
 
 	@Bean
@@ -44,49 +48,59 @@ public class SecurityConfiguration {
 	}
 	
 	@Bean
-	AuthenticationManager authenticationManager(UserDetailsService userDetailsService) {
-		DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-		provider.setUserDetailsService(userDetailsService);
+	public AuthenticationManager authenticationManager(UserDetailsService service) {
+		DaoAuthenticationProvider provider= new DaoAuthenticationProvider();
+		provider.setUserDetailsService(service);
 		provider.setPasswordEncoder(passwordEncoder());
 		return new ProviderManager(provider);
 	}
 	
+	
 	@Bean
 	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-		return http
-				.csrf(c->c.disable())
-				.authorizeHttpRequests(auth->{
-					auth.requestMatchers("/auth/**").permitAll();
-					auth.requestMatchers("/**").hasRole("ADMIN");
-					auth.requestMatchers("/api/addStaff/**").hasAnyRole("USER","STAFF");
-					auth.requestMatchers("/api/appointment/**").hasAnyRole("PATIENT","DOCTOR","STAFF");
-					auth.anyRequest().authenticated();
-				})
-				.oauth2ResourceServer(auth->auth.jwt(j-> j.jwtAuthenticationConverter(jwtAuthenticationConverter())))
-				.sessionManagement(session->session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-				.build();
+			return http
+					.csrf(csrf->csrf.disable())
+					.authorizeHttpRequests(auth->{
+						auth.requestMatchers("/error").permitAll();
+						auth.requestMatchers("/auth/**").permitAll();
+						auth.requestMatchers("/admin/**").hasRole("ADMIN");
+						auth.requestMatchers("/user/**").hasAnyRole("ADMIN","USER","STAFF");
+						auth.requestMatchers("/patient/**").hasAnyRole("ADMIN","USER","PATIENT","STAFF");
+						auth.requestMatchers("/doctor/**").hasAnyRole("ADMIN","USER","DOCTOR","STAFF");
+						auth.anyRequest().authenticated();
+//						auth.anyRequest().authenticated();
+					})
+//					.httpBasic(Customizer.withDefaults())  // this is used when not using auth2 resource server 
+//					.oauth2ResourceServer(OAuth2ResourceServerConfigurer::jwt)
+					.oauth2ResourceServer((oauth2) -> oauth2
+						    .jwt(jwt->jwt.jwtAuthenticationConverter(jwtConverter()))
+						)
+					
+					.sessionManagement(session->session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+					.build();
 	}
 	
 	@Bean
-	public JwtDecoder decoder() {
-		return NimbusJwtDecoder.withPublicKey(rsaKeyProperty.getPublickey()).build();
+	public JwtDecoder decode() {
+		return NimbusJwtDecoder.withPublicKey(key.getPublicKey()).build();
 	}
 	
 	@Bean
-	public JwtEncoder encoder() {
-		JWK jwk=new RSAKey.Builder(rsaKeyProperty.getPublickey()).privateKey(rsaKeyProperty.getPrivateKey()).build();
+	public JwtEncoder encode() {
+		JWK jwk=new RSAKey.Builder(key.getPublicKey()).privateKey(key.getPrivateKey()).build();
 		JWKSource<SecurityContext> source= new ImmutableJWKSet<>(new JWKSet(jwk));
 		return new NimbusJwtEncoder(source);
 	}
 	
 	@Bean
-	public JwtAuthenticationConverter jwtAuthenticationConverter() {
+	public JwtAuthenticationConverter jwtConverter() {
 		JwtGrantedAuthoritiesConverter jwtGrantedAuthoritiesConverter=new JwtGrantedAuthoritiesConverter();
 		jwtGrantedAuthoritiesConverter.setAuthoritiesClaimName("roles");
 		jwtGrantedAuthoritiesConverter.setAuthorityPrefix("ROLE_");
-		JwtAuthenticationConverter jwtAuthenticationConverter= new JwtAuthenticationConverter();
+		JwtAuthenticationConverter jwtAuthenticationConverter=new JwtAuthenticationConverter();
 		jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(jwtGrantedAuthoritiesConverter);
 		return jwtAuthenticationConverter;
 	}
 	
+
 }

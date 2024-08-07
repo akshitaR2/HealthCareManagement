@@ -12,6 +12,10 @@ import org.springframework.context.annotation.Bean;
 import com.management.HealthCare.Entities.Role;
 import com.management.HealthCare.Repositories.RolesRepo;
 
+//import com.management.HealthCare.SecuredLogin.Models.Role;
+//import com.management.HealthCare.SecuredLogin.Repository.RoleRepo;
+
+
 //import com.management.HealthCare.JWTConfig.RsaKey;
 
 @SpringBootApplication

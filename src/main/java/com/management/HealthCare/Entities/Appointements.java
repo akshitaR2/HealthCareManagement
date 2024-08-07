@@ -111,6 +111,14 @@ public class Appointements {
 	public void setReason(String reason) {
 		this.reason = reason;
 	}
+
+	public int getId() {
+		return id;
+	}
+
+	public void setId(int id) {
+		this.id = id;
+	}
 	
 	
 	

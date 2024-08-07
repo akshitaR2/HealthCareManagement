@@ -3,6 +3,9 @@ package com.management.HealthCare.Entities;
 import java.util.Collection;
 import java.util.Set;
 
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+
 import jakarta.annotation.Generated;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -19,7 +22,7 @@ import lombok.Data;
 
 @Entity
 @Table(name = "user_details")
-public class User {
+public class User  implements UserDetails{
 	
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -55,18 +58,15 @@ public class User {
 	}
 
 
-
-
-
-	public String getUsername() {
-		return username;
-	}
+//	public String getUsername() {
+//		return username;
+//	}
 	public void setUsername(String username) {
 		this.username = username;
 	}
-	public String getPassword() {
-		return password;
-	}
+//	public String getPassword() {
+//		return password;
+//	}
 	public void setPassword(String password) {
 		this.password = password;
 	}
@@ -85,17 +85,32 @@ public class User {
 	}
 
 
-	public Set<Role> getAuthorities() {
-		return authorities;
-	}
+//	public Set<Role> getAuthorities() {
+//		return authorities;
+//	}
 
 
 	public void setAuthorities(Set<Role> authorities) {
 		this.authorities = authorities;
 	}
 	
-	
+	@Override
+	public String getPassword() {
+		// TODO Auto-generated method stub
+		return password;
+	}
 
+	@Override
+	public String getUsername() {
+		// TODO Auto-generated method stub
+		return username;
+	}
+
+	@Override
+	public Collection<? extends GrantedAuthority> getAuthorities() {
+		
+		return authorities;
+	}
 	
 	
 

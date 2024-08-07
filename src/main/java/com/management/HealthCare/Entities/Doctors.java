@@ -32,6 +32,7 @@ public class Doctors {
 	private String location;
 	private String address;
 	private String department;
+	private Double DoctorFee = 1000.0;
 	
 	
 	@OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL)
@@ -72,7 +73,7 @@ public class Doctors {
 
 public Doctors(String doctorId, String docName, String specialty, String contact_info, String location, String address,
 		String department, List<Appointements> appointements, List<MedicalRecords> medicalRecords, int office_hours,
-		LocalTime workStartTime, LocalTime workEndTime) {
+		LocalTime workStartTime, LocalTime workEndTime,Double DoctorFee ) {
 	super();
 	this.doctorId = doctorId;
 	this.docName = docName;
@@ -86,6 +87,7 @@ public Doctors(String doctorId, String docName, String specialty, String contact
 	this.office_hours = office_hours;
 	this.workStartTime = workStartTime;
 	this.workEndTime = workEndTime;
+	this.DoctorFee=DoctorFee; 
 }
 
 public String getDoctorId() {
@@ -182,6 +184,14 @@ public LocalTime getWorkEndTime() {
 
 public void setWorkEndTime(LocalTime workEndTime) {
 	this.workEndTime = workEndTime;
+}
+
+public Double getDoctorFee() {
+	return DoctorFee;
+}
+
+public void setDoctorFee(Double doctorFee) {
+	DoctorFee = doctorFee;
 }
 
 
